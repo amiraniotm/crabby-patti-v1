@@ -3,14 +3,6 @@ It is a clone from an old Mario game. Hit platforms from below to flip
 enemies and then go kick them before they recover! Save your crab friends
 from the evil scaly hands of corporate reptilians!
 
-DOWNLOAD INSTRUCTIONS
-
-Download the exe file
-
-Execute it and allow permissions from defender or antivirus if asked
-
-Have fun!
-
 CREDITS
 
 The main character (Crabby Patti) was designed by @van___van (instagram)
