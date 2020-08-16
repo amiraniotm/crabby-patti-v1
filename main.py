@@ -2,6 +2,7 @@ import pygame as pg
 import random
 import sys
 import six
+vec = pg.math.Vector2
 #only for packing
 #import packaging
 from settings import *
@@ -25,6 +26,7 @@ class Game:
         self.start_tick = 0
         self.player_score = 0
         self.started = False
+        self.life_locations = []
         self.load_data()
 
     #initial data loading. Folder mapping can be done here but is done instead in the settings file
@@ -69,9 +71,13 @@ class Game:
                         self.sp2 = SpawnPoint(self, col, row, False)
                 if tile == 'C':
                     self.counter = Counter(self, col, row)
+                if tile == 'L':
+                    self.life_locations.append(vec(col,row))
         self.camera = Camera(self.map.width, self.map.height)
-        self.spawnevent = pg.USEREVENT + 1
-        pg.time.set_timer(self.spawnevent, mob_spawn_time)
+        self.mob_spawnevent = pg.USEREVENT + 1
+        self.life_spawnevent = pg.USEREVENT + 2
+        pg.time.set_timer(self.mob_spawnevent, mob_spawn_time)
+        pg.time.set_timer(self.life_spawnevent, life_spawn_time)
         if self.level > 1:
             if self.pb1.pows > 0:
                 self.all_sprites.add(self.pb1)
@@ -146,13 +152,15 @@ class Game:
                     self.quit()
                 if (event.key == pg.K_SPACE or event.key == pg.K_z) and not (self.player.isjump or self.player.midair):
                     jump(self.player)
-            if event.type == self.spawnevent:
+            if event.type == self.mob_spawnevent:
                 for sp in self.utilities:
                     if sp.active:
                         self.counter.send_mob(sp)
                         sp.active = False
                     else:
                         sp.active = True
+            if event.type == self.life_spawnevent:
+                self.counter.lifecheck()
 
     def wait_for_key(self):
 

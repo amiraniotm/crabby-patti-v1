@@ -28,3 +28,24 @@ As for me I'm a boring slave to the system by day, storyteller and (newb) indie 
 night and you can find me around the webz (instagram,github,twitter,itch.io) @amirani.otm
 
 For inquiries or comments hit me at hector.m0202@gmail.com
+
+---------------------
+
+##### VERSION 1.0.4 ######
+
+Fully playable!
+
+OS:
+ - changing folder system
+
+mechs:
+  - Full new enemy! Flamey (and Gooey) gets mad if you try to flip it, and if you don't flip
+  it again soon it will explode and burn the platform it's in, making it harder
+  for you to move on it
+  - Extra life sprite created
+
+beautify:
+  - New walking sprites!
+
+to fix:
+  - SFX not playing

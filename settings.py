@@ -12,6 +12,13 @@ red = (255,0,0)
 blue = (0,0,255)
 yellow = (255,255,0)
 
+# Map settings
+tilesize = 32
+plat_burn_delay = 50
+#gridwidth = width/tilesize
+#gridheight = height/tilesize
+#plat settings
+
 # Game settings
 width = 1024
 height = 704
@@ -19,24 +26,22 @@ fps = 60
 title = "Crabby Patti vs The World"
 bgcolor = black
 #test enemies
-'''enemies = [[{'flamey':1,'pgrunt':1}],[{'pgrunt':1, 'psuper':1,'rept':1}],[{'psuper':1,'rept': 1, 'baby':1}]]'''
+enemies = [[{'gooey':1,'pgrunt':1}],[{'pgrunt':1, 'psuper':1,'rept':1}],[{'psuper':1,'rept': 1, 'baby':1}]]
 #final enemies
-enemies = [[{'pgrunt':5},{'pgrunt':4, 'psuper':2},{'pgrunt':2, 'psuper':4}],
+'''enemies = [[{'pgrunt':5},{'pgrunt':4, 'psuper':2},{'pgrunt':2, 'psuper':4}],
             [{'pgrunt':4, 'psuper':4,}, {'pgrunt':4, 'psuper':4, 'flamey':1}, {'pgrunt':2, 'psuper':3,'rept':2,'flamey':2}],
-            [{'psuper':2,'rept': 4, 'baby':1,'flamey':1}, {'psuper':2,'rept':4,'baby':2,'flamey':1}, {'rept':4, 'baby':4,'flamey':2}]]
+            [{'psuper':2,'rept': 4, 'baby':1,'flamey':1}, {'psuper':2,'rept':4,'baby':2,'flamey':1}, {'rept':4, 'baby':4,'flamey':2}]]'''
 enemy_types = ['pgrunt','psuper','flamey','rept','baby']
 transition_time = 3000
 level_time = 90
 pb_pows = 3
 walk_delay = 25
 total_levels = 3
-
-# Map settings
-tilesize = 32
-#gridwidth = width/tilesize
-#gridheight = height/tilesize
-#plat settings
-plat_burn_delay = 50
+life_duration = 5000
+life_spawn_time = 5000
+life_q = 85
+life_prob = 99
+life_blink_delay = 200
 
 # Player settings
 player_acc = 6

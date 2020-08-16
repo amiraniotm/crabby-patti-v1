@@ -75,7 +75,7 @@ def jump(sprite):
 #cycling through walking sprites
 def walk(sprite):
     now = pg.time.get_ticks()
-    if sprite.walkcount + 1 >= 20:
+    if sprite.walkcount + 1 >= (20 if sprite.type in ['patti','flamey','rept','gooey'] else 40):
         sprite.walkcount = 0
     if not sprite.standing and not sprite.midair:
         if now - sprite.walkies > walk_delay:
@@ -98,6 +98,16 @@ def walk(sprite):
         if pg.time.get_ticks() - sprite.kicktime < 300:
             sprite.image = sprite.game.spritesheet.get_image('patti_attack')
             sprite.kicking = False
+
+def item_probs(caller,itemprob):
+    prob_life = random.randrange(0,100)
+    prob_loc = random.randrange(1,100*len(caller.game.life_locations))
+    life_loc = None
+    if prob_life < itemprob:
+        for i in range(len(caller.game.life_locations)):
+            if (i*100 + 1) < prob_loc < ((i+1)*100 + 1):
+                life_loc = caller.game.life_locations[i]
+    return life_loc
 
 class Spritesheet():
 
@@ -123,6 +133,21 @@ class Spritesheet():
                 image = pg.transform.scale(image,(int(image.get_width()*1.3),int(image.get_height()*1.2)))
         return image
 
+    def get_image_list(self,sprite,action,spriteType,status = None):
+        if (sprite in sprite.game.players) or (sprite in sprite.game.mobs):
+            s_list = []
+            if action == 'walk':
+                if spriteType in ['patti','rept', 'flamey', 'gooey']:
+                    for i in range(1,3):
+                        if status == None:
+                            s_list.append(sprite.game.spritesheet.get_image(spriteType + '_walk_' + str(i)))
+                        elif status == 'mad':
+                            s_list.append(sprite.game.spritesheet.get_image(spriteType + '_mad_' + str(i)))
+                elif spriteType in ['pgrunt', 'psuper']:
+                    for i in range(1,5):
+                        s_list.append(sprite.game.spritesheet.get_image(spriteType + '_walk_' + str(i)))
+        return s_list
+
 #the player sprite is the effector of the real life player inputs
 class Player(pg.sprite.Sprite):
 
@@ -131,6 +156,7 @@ class Player(pg.sprite.Sprite):
         self.groups = game.all_sprites, game.players
         pg.sprite.Sprite.__init__(self, self.groups)
         self.game = game
+        self.type = 'patti'
         self.image = self.game.spritesheet.get_image('patti_stand')
         self.rect = self.image.get_rect()
         self.x = x
@@ -152,8 +178,8 @@ class Player(pg.sprite.Sprite):
         self.rsptime = 0
         self.standing = True
         self.walkcount = 0
-        self.walk_sprites = [self.game.spritesheet.get_image('patti_walk_1'),self.game.spritesheet.get_image('patti_walk_2')]
-        self.stand = [self.game.spritesheet.get_image('patti_stand')]
+        self.walk_sprites = self.game.spritesheet.get_image_list(self,'walk',self.type)
+        self.stand = self.game.spritesheet.get_image('patti_stand')
         #self.jumpsound = self.game.sfx['jump.wav']
         #self.fallsound = self.game.sfx['player_fall.wav']
         self.left = False
@@ -163,6 +189,7 @@ class Player(pg.sprite.Sprite):
         self.kicktime = 0
         self.mask = pg.mask.from_surface(self.image)
         self.slowed = False
+        self.mad = False
         self.rplat = Platform(self.game,(self.rect.left/tilesize) - 1,(self.rect.bottom/tilesize)-0.3,'9')
 
     #keyboard input mapping
@@ -195,7 +222,7 @@ class Player(pg.sprite.Sprite):
 
     #method for respawning after unflipped enemy hit
     def revive(self):
-        self.image = self.stand[0]
+        self.image = self.stand
         self.ded = False
         if self.lives > 0:
             self.rsptime = pg.time.get_ticks()
@@ -301,15 +328,9 @@ class Mob(pg.sprite.Sprite):
         self.mad = False
         self.left = False
         #self.hitsound = self.game.sfx['hit_enemy.wav']
-        if type != 'baby' and self.type != 'flamey':
-            self.walk_sprites = [self.game.spritesheet.get_image(type+'_walk_1'),self.game.spritesheet.get_image(type+'_walk_2')]
-        if type == 'flamey':
-            self.walk_sprites = [self.game.spritesheet.get_image(type+'_walk_1')]
-            self.walk_sprites.append(pg.transform.flip(self.walk_sprites[0],True,False))
-            self.mad_sprites = [self.game.spritesheet.get_image(type+'_mad_2')]
-            self.mad_sprites.append(pg.transform.flip(self.mad_sprites[0],True,False))
-        if type == 'rept':
-            self.mad_sprites = [self.game.spritesheet.get_image(type+'_mad_1'),self.game.spritesheet.get_image(type+'_mad_2')]
+        self.walk_sprites = self.game.spritesheet.get_image_list(self,'walk',self.type)
+        if type in ['rept', 'flamey', 'gooey']:
+            self.mad_sprites = self.game.spritesheet.get_image_list(self,'walk',self.type,'mad')
         self.walkcount = 0
         self.jumpies = 0
         self.jumpstart = 0
@@ -325,7 +346,7 @@ class Mob(pg.sprite.Sprite):
         #collision with player
         hit = pg.sprite.spritecollide(self, self.game.players, False)
         if hit:
-            if self.flipped and not self.type == 'flamey':
+            if self.flipped and not self.type in ['flamey','gooey']:
                 hit[0].kicking = True
                 hit[0].kicktime = pg.time.get_ticks()
                 pg.display.flip()
@@ -387,7 +408,7 @@ class Mob(pg.sprite.Sprite):
                         if (pg.time.get_ticks() - self.fliptime) > mob_mad_time:
                             self.mad = False
                             self.fliptime = 0
-                elif self.type == 'flamey':
+                elif self.type in ['flamey','gooey']:
                     if not self.mad:
                         self.vel.x = mob_speed
                     else:
@@ -426,8 +447,9 @@ class Mob(pg.sprite.Sprite):
     def explode(self):
         hit = pg.sprite.spritecollide(self,self.game.platforms,False)
         if hit:
-            hit[0].charred = True
+            hit[0].dmg = self.type
             hit[0].origin = True
+            hit[0].charred = True
             self.kill()
 
     def crash(self):
@@ -467,7 +489,7 @@ class Mob(pg.sprite.Sprite):
             self.fliptime = pg.time.get_ticks()
             self.flippable = False
             if not self.flipped:
-                if self.type != 'rept' and self.type != 'flamey':
+                if self.type != 'rept' and self.type not in ['flamey','gooey']:
                     self.image = self.game.spritesheet.get_image(self.type+'_ded')
                     self.flipped = True
                     if self.left:
@@ -490,11 +512,11 @@ class Mob(pg.sprite.Sprite):
             self.flippable = True
         #completes jump animation when flipped (initiated by Platform)
         if (self.iniy != 0 and self.midair) and (self.flipped or self.mad):
-            if self.type == 'flamey':
+            if self.type in ['flamey','gooey']:
                 if (pg.time.get_ticks() - self.fliptime) < mob_flame_time:
                     self.vel = vec(0,0)
                     if not self.mad:
-                        self.image = self.game.spritesheet.get_image(self.type + '_mad_1')
+                        self.image = self.game.spritesheet.get_image(self.type + '_stat')
                     else:
                         self.image = self.game.spritesheet.get_image(self.type + '_ded')
                     self.rect = self.image.get_rect()
@@ -574,6 +596,7 @@ class Platform(pg.sprite.Sprite):
         self.c_right = []
         self.c_left = []
         self.mask = pg.mask.from_surface(self.image)
+        self.dmg = ''
 
     #when platform is hit from below, it flips any enemy above it
     def flop(self):
@@ -588,13 +611,14 @@ class Platform(pg.sprite.Sprite):
                     hit.iniy = hit.pos.y
                     hit.inix = hit.pos.x
                     hit.flip()
-                    if hit.type == 'flamey':
+                    if hit.type in ['flamey','gooey']:
                         hit.flipped = True
 
     def burn_plats(self):
         if self.subg == []:
             for plat in self.game.platforms:
                 if plat.subgroup == self.subgroup and not plat == self:
+                    plat.dmg = self.dmg
                     self.subg.append(plat)
             for pt in self.subg:
                 for i in range(len(self.subg) + 1):
@@ -610,8 +634,8 @@ class Platform(pg.sprite.Sprite):
                         for f in self.game.lethals:
                             if f.dir == 'left':
                                 f.kill()
-                    fire = Flame(self.game,ptl.rect.centerx,ptl.rect.centery - tilesize,'left')
-                    fire.image = pg.transform.flip(fire.image,True,False)
+                    debris = Debris(self.game,ptl.rect.centerx,ptl.rect.centery - tilesize,ptl.dmg,'left')
+                    debris.image = pg.transform.flip(debris.image,True,False)
                     ptl.charred = True
                     if pg.sprite.spritecollide(self.game.player,self.game.lethals,False) and not self.game.player.ded:
                         self.game.player.die()
@@ -622,7 +646,7 @@ class Platform(pg.sprite.Sprite):
                         for f in self.game.lethals:
                             if f.dir == 'right':
                                 f.kill()
-                    fire = Flame(self.game,ptr.rect.centerx,ptr.rect.centery - tilesize,'right')
+                    debris = Debris(self.game,ptr.rect.centerx,ptr.rect.centery - tilesize,ptr.dmg,'right')
                     ptr.charred = True
                     if pg.sprite.spritecollide(self.game.player,self.game.lethals,False) and not self.game.player.ded:
                         self.game.player.die()
@@ -634,6 +658,7 @@ class Platform(pg.sprite.Sprite):
                 self.origin = False
                 for f in self.game.lethals:
                     f.kill()
+
     #checks for flops and updates position and rect position if any
     def update(self):
         self.flop()
@@ -642,7 +667,7 @@ class Platform(pg.sprite.Sprite):
             self.pos.y += 5
             self.floptime = 0
         if self.charred:
-            self.image = self.game.spritesheet.get_image('charred_plat')
+            self.image = self.game.spritesheet.get_image(self.dmg+'_plat')
         if self.origin:
             self.burn_plats()
 
@@ -694,10 +719,10 @@ class Counter(pg.sprite.Sprite):
         self.rect.center = self.pos
         self.stage = 0
         self.level_enemies = enemies[self.game.level - 1]
-        self.currdict = 0
-        self.dictremain = 0
         self.living_enemies = 0
         self.enemy_count = 0
+        self.extra = False
+        self.total_enemies = 0
 
     def send_mob(self,sp):
         for key in self.stage_enemies.keys():
@@ -705,6 +730,21 @@ class Counter(pg.sprite.Sprite):
                 sp.spawn(key)
                 self.stage_enemies[key] -= 1
                 break
+
+    def lifecheck(self):
+        if self.game.player.lives < player_lives:
+            if self.game.cdown < life_q:
+                if self.living_enemies < self.total_enemies:
+                    if not self.extra:
+                        self.send_life()
+
+    def send_life(self):
+        prob = item_probs(self,life_prob)
+        if prob == None:
+            pass
+        else:
+            Life(self.game,prob.x,prob.y)
+            self.extra = True
 
     def next_stage(self):
         self.stage += 1
@@ -730,6 +770,7 @@ class Counter(pg.sprite.Sprite):
         for x in self.stage_enemies.values():
             self.living_enemies += x
             self.enemy_count += x
+            self.total_enemies += x
 
     def update(self):
         if self.living_enemies == 0:
@@ -767,7 +808,7 @@ class PowBlock(pg.sprite.Sprite):
                             mob.iniy = mob.pos.y
                             mob.inix = mob.pos.x
                             mob.flip()
-                    if mob.type == 'flamey':
+                    if mob.type in ['flamey','gooey']:
                         mob.flipped = True
         self.pows -= 1
 
@@ -789,14 +830,55 @@ class PowBlock(pg.sprite.Sprite):
         if self.pows == 0:
             self.kill()
 
-class Flame(pg.sprite.Sprite):
+class Debris(pg.sprite.Sprite):
 
-    def __init__(self, game, x, y, dir):
+    def __init__(self, game, x, y, type, dir):
         self.groups = game.all_sprites,game.lethals
         self.game = game
         self.dir = dir
         pg.sprite.Sprite.__init__(self, self.groups)
-        self.image = self.game.spritesheet.get_image('fire_2')
+        if type == 'flamey':
+            self.image = self.game.spritesheet.get_image('fire_2')
+        else:
+            self.image = self.game.spritesheet.get_image('goo')
         self.rect = self.image.get_rect()
         self.pos = vec(x, y)
         self.rect.center = self.pos
+
+class Life(pg.sprite.Sprite):
+
+    def __init__(self, game, x, y):
+        self.groups = game.all_sprites
+        self.game = game
+        pg.sprite.Sprite.__init__(self,self.groups)
+        self.image = self.game.spritesheet.get_image('patti_life')
+        self.rect = self.image.get_rect()
+        self.pos = vec(x*tilesize,y*tilesize)
+        self.rect.center = self.pos
+        self.duration = life_duration
+        self.spawntime = pg.time.get_ticks()
+        self.blink_time = 0
+        self.transparent = False
+
+    def blink(self):
+        now = pg.time.get_ticks()
+        if now - self.blink_time > life_blink_delay:
+            if not self.transparent:
+                self.image = pg.Surface((32,32))
+                self.image.fill(black)
+                self.image.set_colorkey(black)
+                self.transparent = True
+            else:
+                self.image = self.game.spritesheet.get_image('patti_life')
+                self.transparent = False
+            self.blink_time = now
+
+    def update(self):
+        if abs(self.spawntime - pg.time.get_ticks()) > self.duration / 2:
+            self.blink()
+        if abs(self.spawntime - pg.time.get_ticks()) > self.duration:
+            self.kill()
+        if pg.sprite.spritecollide(self,self.game.players,False):
+            self.kill()
+            self.game.player.lives += 1
+            self.game.lives_spent -= 1
